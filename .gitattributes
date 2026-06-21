@@ -1,0 +1,11 @@
+# Tratează fișierele Unity ca text pentru diff-uri corecte
+*.cs text diff=csharp
+*.meta text
+*.unity text
+*.asset text
+*.prefab text
+*.json text
+*.md text
+
+# Forțează sfârșit de linie LF pentru fișierele sursă
+*.cs eol=lf
