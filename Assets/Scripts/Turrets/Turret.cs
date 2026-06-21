@@ -1,27 +1,33 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TowerDefense
 {
     /// <summary>
-    /// Unitatea de apărare. Caută automat cel mai apropiat inamic din rază, își
-    /// orientează țeava spre el și trage proiectile la intervale regulate.
+    /// Unitatea de apărare. Caută automat cele mai apropiate ținte din rază, își
+    /// orientează țeava spre prima și trage proiectile. Suportă lovirea mai multor
+    /// ținte simultan (ex. Inferno) și daune de zonă la impact (ex. Mortieră).
     /// </summary>
     public class Turret : MonoBehaviour
     {
         float range;
         float fireRate;
         float damage;
+        float splashRadius;
+        int maxTargets;
         Color bulletColor;
 
         Transform barrel;
-        Enemy target;
         float cooldown;
+        readonly List<Enemy> targets = new List<Enemy>();
 
         public void Init(TurretBlueprint bp)
         {
             range = bp.range;
             fireRate = bp.fireRate;
             damage = bp.damage;
+            splashRadius = bp.splashRadius;
+            maxTargets = Mathf.Max(1, bp.maxTargets);
             bulletColor = bp.bulletColor;
 
             transform.localScale = Vector3.one * 0.8f;
@@ -46,45 +52,39 @@ namespace TowerDefense
             if (GameManager.Instance != null && GameManager.Instance.State != GameManager.GameState.Playing) return;
 
             cooldown -= Time.deltaTime;
-            AcquireTarget();
+            AcquireTargets();
 
-            if (target != null)
+            if (targets.Count > 0)
             {
-                AimAt(target.transform.position);
+                AimAt(targets[0].transform.position);
                 if (cooldown <= 0f)
                 {
-                    Shoot();
+                    for (int i = 0; i < targets.Count; i++) ShootAt(targets[i]);
                     cooldown = 1f / Mathf.Max(0.01f, fireRate);
                 }
             }
         }
 
-        void AcquireTarget()
+        /// <summary>Selectează cele mai apropiate „maxTargets" ținte aflate în rază.</summary>
+        void AcquireTargets()
         {
-            // Păstrează ținta curentă cât timp e validă și în rază.
-            if (target != null)
-            {
-                float d = (target.transform.position - transform.position).sqrMagnitude;
-                if (d > range * range) target = null;
-            }
-            if (target != null) return;
-
-            // Altfel, caută cel mai apropiat inamic din rază.
-            float best = range * range;
-            Enemy nearest = null;
+            targets.Clear();
+            float r2 = range * range;
             var list = Enemy.Active;
-            for (int i = 0; i < list.Count; i++)
+            for (int k = 0; k < maxTargets; k++)
             {
-                var e = list[i];
-                if (e == null) continue;
-                float d = (e.transform.position - transform.position).sqrMagnitude;
-                if (d <= best)
+                Enemy best = null;
+                float bestD = r2;
+                for (int i = 0; i < list.Count; i++)
                 {
-                    best = d;
-                    nearest = e;
+                    var e = list[i];
+                    if (e == null || targets.Contains(e)) continue;
+                    float d = (e.transform.position - transform.position).sqrMagnitude;
+                    if (d <= bestD) { bestD = d; best = e; }
                 }
+                if (best == null) break;
+                targets.Add(best);
             }
-            target = nearest;
         }
 
         void AimAt(Vector3 worldPos)
@@ -94,12 +94,12 @@ namespace TowerDefense
             barrel.rotation = Quaternion.Euler(0, 0, angle);
         }
 
-        void Shoot()
+        void ShootAt(Enemy target)
         {
             var go = new GameObject("Bullet");
             if (transform.parent != null) go.transform.SetParent(transform.parent);
             go.transform.position = transform.position;
-            go.AddComponent<Bullet>().Init(target, damage, bulletColor);
+            go.AddComponent<Bullet>().Init(target, damage, splashRadius, bulletColor);
         }
     }
 }

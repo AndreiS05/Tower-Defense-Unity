@@ -22,6 +22,7 @@ namespace TowerDefense
         Font font;
         List<TurretBlueprint> blueprints;
         readonly List<Button> shopButtons = new List<Button>();
+        readonly List<Text> shopLabels = new List<Text>();
         Coroutine bannerRoutine;
 
         void Awake()
@@ -48,18 +49,33 @@ namespace TowerDefense
                 if (waveText != null && lm.CurrentSpawner != null)
                     waveText.text = $"Val: {lm.CurrentSpawner.CurrentWave}/{lm.CurrentSpawner.TotalWaves}";
             }
-            HighlightSelected();
+            UpdateShop();
         }
 
-        void HighlightSelected()
+        void UpdateShop()
         {
-            if (BuildManager.Instance == null) return;
+            int level = LevelManager.Instance != null ? LevelManager.Instance.CurrentLevel : 1;
             for (int i = 0; i < shopButtons.Count; i++)
             {
-                bool sel = BuildManager.Instance.Selected == blueprints[i];
-                var img = shopButtons[i].GetComponent<Image>();
-                var c = blueprints[i].color;
-                img.color = sel ? c : new Color(c.r * 0.55f, c.g * 0.55f, c.b * 0.55f, 1f);
+                var bp = blueprints[i];
+                var btn = shopButtons[i];
+                var img = btn.GetComponent<Image>();
+                var lbl = shopLabels[i];
+                bool unlocked = level >= bp.unlockLevel;
+                btn.interactable = unlocked;
+
+                if (!unlocked)
+                {
+                    img.color = new Color(0.22f, 0.22f, 0.22f, 1f);
+                    if (lbl != null) lbl.text = $"{bp.name}\nNivel {bp.unlockLevel}";
+                }
+                else
+                {
+                    bool sel = BuildManager.Instance != null && BuildManager.Instance.Selected == bp;
+                    var c = bp.color;
+                    img.color = sel ? c : new Color(c.r * 0.55f, c.g * 0.55f, c.b * 0.55f, 1f);
+                    if (lbl != null) lbl.text = $"{bp.name}\n{bp.cost} $";
+                }
             }
         }
 
@@ -133,8 +149,8 @@ namespace TowerDefense
             Place(bannerText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 180), new Vector2(1600, 220));
             bannerText.gameObject.SetActive(false);
 
-            // Magazin (jos).
-            float bw = 360, bh = 110, gap = 30;
+            // Magazin (jos, lipit de marginea de jos ca să nu acopere tile-urile de joc).
+            float bw = 300, bh = 88, gap = 20;
             float totalW = blueprints.Count * bw + (blueprints.Count - 1) * gap;
             float startX = -totalW / 2f + bw / 2f;
             for (int i = 0; i < blueprints.Count; i++)
@@ -142,9 +158,10 @@ namespace TowerDefense
                 var bp = blueprints[i];
                 float x = startX + i * (bw + gap);
                 var btn = MakeButton(canvas.transform, $"{bp.name}\n{bp.cost} $",
-                    new Vector2(0.5f, 0), new Vector2(x, 80), new Vector2(bw, bh), bp.color);
+                    new Vector2(0.5f, 0), new Vector2(x, 52), new Vector2(bw, bh), bp.color);
                 btn.onClick.AddListener(() => BuildManager.Instance.Select(bp));
                 shopButtons.Add(btn);
+                shopLabels.Add(btn.GetComponentInChildren<Text>());
             }
 
             // Ecran final (ascuns implicit).
@@ -223,7 +240,9 @@ namespace TowerDefense
             Place(rt, anchor, pos, size);
             rt.gameObject.AddComponent<Image>().color = color;
             var btn = rt.gameObject.AddComponent<Button>();
-            var txt = MakeText(rt, label, 28, TextAnchor.MiddleCenter, Color.white);
+            // Controlăm noi culorile (selectat/blocat) — fără tranziția automată de culoare.
+            btn.transition = Selectable.Transition.None;
+            var txt = MakeText(rt, label, 26, TextAnchor.MiddleCenter, Color.white);
             Place(txt.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, size);
             return btn;
         }

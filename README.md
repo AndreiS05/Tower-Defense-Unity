@@ -54,13 +54,18 @@ Campania are **3 niveluri**, fiecare cu **8 valuri**:
 - Punctele de **apariție** (portal cyan rotativ) și **baza** (romb roșu cu inel auriu și
   miez pulsatil) au grafică dedicată.
 
-### Tipuri de ture
+### Tipuri de ture (unele se deblochează pe niveluri)
 
-| Tură       | Cost | Rază  | Cadență | Daune | Rol                          |
-|------------|------|-------|---------|-------|------------------------------|
-| Mitralieră | 50   | medie | rapidă  | mici  | volum de foc pe ținte slabe  |
-| Tun        | 100  | medie | lentă   | mari  | daune pe burst               |
-| Lunetist   | 150  | mare  | lentă   | f. mari| acoperă distanțe lungi      |
+| Tură       | Cost | Deblocare | Rază   | Rol                                         |
+|------------|------|-----------|--------|---------------------------------------------|
+| Mitralieră | 50   | Nivel 1   | medie  | volum de foc pe ținte slabe                 |
+| Tun        | 100  | Nivel 1   | medie  | daune mari pe lovitură                       |
+| Lunetist   | 150  | Nivel 1   | mare   | daune f. mari la distanță                    |
+| Mortieră   | 175  | **Nivel 2** | medie | **daune de zonă (AoE)** — lovește tot grupul de pe tile-urile din jur |
+| Inferno    | 275  | **Nivel 3** | f. mare | **lovește 3 inamici simultan**; rază mai mare decât Mitralieră/Tun; cea mai scumpă |
+
+> Armele blocate apar în magazin cu eticheta „Nivel X" și se activează automat când
+> ajungi la nivelul respectiv (un banner anunță arma nouă).
 
 ## Structura proiectului
 

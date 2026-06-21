@@ -55,7 +55,21 @@ namespace TowerDefense
             CurrentSpawner = spawnerGo.AddComponent<WaveSpawner>();
             CurrentSpawner.Init(routes, def, CurrentLevel);
 
-            if (ui != null) ui.ShowBanner($"NIVELUL {CurrentLevel}", 2f);
+            // Anunță nivelul și, dacă e cazul, arma nou deblocată.
+            if (ui != null)
+            {
+                string unlocked = NewlyUnlockedWeapon();
+                if (unlocked != null) ui.ShowBanner($"NIVELUL {CurrentLevel}\nArma noua: {unlocked}!", 2.6f);
+                else ui.ShowBanner($"NIVELUL {CurrentLevel}", 2f);
+            }
+        }
+
+        string NewlyUnlockedWeapon()
+        {
+            if (blueprints == null) return null;
+            foreach (var bp in blueprints)
+                if (bp.unlockLevel == CurrentLevel && CurrentLevel > 1) return bp.name;
+            return null;
         }
 
         /// <summary>Apelat de WaveSpawner când nivelul curent a fost curățat complet.</summary>
