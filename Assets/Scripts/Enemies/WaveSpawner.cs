@@ -5,12 +5,14 @@ using UnityEngine;
 namespace TowerDefense
 {
     /// <summary>
-    /// Gestionează valurile de inamici (Waves). Generează automat valuri din ce în ce
-    /// mai dificile, le lansează pe rând cu o pauză între ele și declanșează victoria
-    /// când toate valurile au fost eliminate.
+    /// Gestionează cele 8 valuri (Waves) ale unui nivel. Inamicii apar pe una dintre
+    /// rutele nivelului, aleasă aleatoriu. Ultimul val (8) aduce un BOSS mare. Când tot
+    /// nivelul a fost curățat, anunță <see cref="LevelManager"/> pentru a trece mai departe.
     /// </summary>
     public class WaveSpawner : MonoBehaviour
     {
+        const int WavesPerLevel = 8;
+
         class Wave
         {
             public int count;
@@ -22,35 +24,39 @@ namespace TowerDefense
             public float scale;
         }
 
-        WaypointPath path;
+        List<WaypointPath> routes;
+        LevelDefinition def;
+        int level;
         readonly List<Wave> waves = new List<Wave>();
         float timeBetweenWaves = 6f;
         int aliveCount;
         bool allSpawned;
 
         public int CurrentWave { get; private set; }
-        public int TotalWaves => waves.Count;
-        public float CountdownToNext { get; private set; }
+        public int TotalWaves => WavesPerLevel;
 
-        public void Init(WaypointPath path, int waveCount)
+        public void Init(List<WaypointPath> routes, LevelDefinition def, int level)
         {
-            this.path = path;
-            GenerateWaves(waveCount);
+            this.routes = routes;
+            this.def = def;
+            this.level = level;
+            GenerateWaves();
         }
 
-        void GenerateWaves(int count)
+        void GenerateWaves()
         {
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < WavesPerLevel; i++)
             {
-                float tNorm = i / (float)Mathf.Max(1, count - 1);
+                float tNorm = i / (float)(WavesPerLevel - 1);
                 waves.Add(new Wave
                 {
                     count = 5 + i * 2,
                     interval = Mathf.Max(0.35f, 0.9f - i * 0.05f),
-                    health = 40f + i * 18f,
-                    speed = 2.2f + i * 0.12f,
-                    reward = 12 + i,
-                    color = Color.Lerp(new Color(1f, 0.65f, 0.2f), new Color(0.85f, 0.1f, 0.1f), tNorm),
+                    health = (40f + i * 18f) * def.healthMultiplier,
+                    speed = 2.2f + i * 0.1f,
+                    // Economie rebalansată: recompensă mică pe inamic, ca să nu fie prea ușor.
+                    reward = 4 + Mathf.FloorToInt(i * 0.5f),
+                    color = Color.Lerp(def.enemyColorA, def.enemyColorB, tNorm),
                     scale = 0.55f + i * 0.015f
                 });
             }
@@ -62,8 +68,7 @@ namespace TowerDefense
         void HandleEnemyRemoved()
         {
             aliveCount = Mathf.Max(0, aliveCount - 1);
-            if (allSpawned && aliveCount == 0 && GameManager.Instance != null)
-                GameManager.Instance.WinGame();
+            TryComplete();
         }
 
         IEnumerator Start()
@@ -74,22 +79,27 @@ namespace TowerDefense
             {
                 CurrentWave = w + 1;
 
-                // Numărătoare inversă până la următorul val.
                 float t = timeBetweenWaves;
                 while (t > 0f)
                 {
                     if (IsDefeated()) yield break;
-                    CountdownToNext = t;
                     t -= Time.deltaTime;
                     yield return null;
                 }
 
                 yield return StartCoroutine(SpawnWave(waves[w]));
+
+                // Ultimul val: după valul de inamici de rând, apare BOSS-ul.
+                if (w == waves.Count - 1)
+                {
+                    yield return new WaitForSeconds(1.2f);
+                    if (IsDefeated()) yield break;
+                    SpawnBoss();
+                }
             }
 
             allSpawned = true;
-            if (aliveCount == 0 && GameManager.Instance != null)
-                GameManager.Instance.WinGame();
+            TryComplete();
         }
 
         IEnumerator SpawnWave(Wave wave)
@@ -105,17 +115,48 @@ namespace TowerDefense
         void SpawnEnemy(Wave wave)
         {
             var go = new GameObject("Enemy");
-            var enemy = go.AddComponent<Enemy>();
-            enemy.Init(path, new EnemyStats
+            go.transform.SetParent(transform.parent);
+            go.AddComponent<Enemy>().Init(RandomRoute(), new EnemyStats
             {
                 maxHealth = wave.health,
                 speed = wave.speed,
                 reward = wave.reward,
                 baseDamage = 1,
                 color = wave.color,
-                scale = wave.scale
+                scale = wave.scale,
+                isBoss = false
             });
             aliveCount++;
+        }
+
+        void SpawnBoss()
+        {
+            if (GameUI.Instance != null) GameUI.Instance.ShowBanner("BOSS!", 2f);
+
+            var go = new GameObject("Boss");
+            go.transform.SetParent(transform.parent);
+            go.AddComponent<Enemy>().Init(RandomRoute(), new EnemyStats
+            {
+                maxHealth = (600f + 600f * (level - 1)) * def.healthMultiplier,
+                speed = 1.6f,
+                reward = 80 + level * 20,
+                baseDamage = 10,
+                color = def.bossColor,
+                scale = 1.8f,
+                isBoss = true
+            });
+            aliveCount++;
+        }
+
+        WaypointPath RandomRoute()
+        {
+            return routes[Random.Range(0, routes.Count)];
+        }
+
+        void TryComplete()
+        {
+            if (allSpawned && aliveCount == 0 && !IsDefeated() && LevelManager.Instance != null)
+                LevelManager.Instance.NotifyLevelCleared();
         }
 
         static bool IsDefeated()

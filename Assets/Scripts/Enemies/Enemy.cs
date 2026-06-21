@@ -13,12 +13,13 @@ namespace TowerDefense
         public int baseDamage;
         public Color color;
         public float scale;
+        public bool isBoss;
     }
 
     /// <summary>
-    /// Inamic care urmează traiectoria (Waypoints). Are puncte de viață, poate fi
-    /// lovit de proiectile, oferă o recompensă la moarte și provoacă pagube bazei
-    /// dacă ajunge la capătul traseului.
+    /// Inamic care urmează o rută (Waypoints). Are puncte de viață, poate fi lovit de
+    /// proiectile, oferă o recompensă la moarte și provoacă pagube bazei dacă ajunge la
+    /// capătul traseului. Boss-ul este o variantă mărită și evidențiată vizual.
     /// </summary>
     public class Enemy : MonoBehaviour
     {
@@ -37,7 +38,10 @@ namespace TowerDefense
         WaypointPath path;
         int waypointIndex;
         Transform healthBar;
+        float barWidth;
         bool removed;
+
+        public bool IsBoss { get; private set; }
 
         public void Init(WaypointPath path, EnemyStats stats)
         {
@@ -47,27 +51,54 @@ namespace TowerDefense
             speed = stats.speed;
             reward = stats.reward;
             baseDamage = stats.baseDamage;
+            IsBoss = stats.isBoss;
             waypointIndex = 0;
             transform.position = path.Start;
-            BuildVisual(stats.color, stats.scale);
+            BuildVisual(stats);
         }
 
-        void BuildVisual(Color color, float scale)
+        void BuildVisual(EnemyStats s)
         {
-            var body = gameObject.AddComponent<SpriteRenderer>();
-            body.sprite = TextureFactory.CreateCircle(color);
-            body.sortingOrder = 5;
-            transform.localScale = Vector3.one * scale;
+            transform.localScale = Vector3.one * s.scale;
 
-            // Bară de viață simplă deasupra inamicului.
+            var body = gameObject.AddComponent<SpriteRenderer>();
+            body.sprite = TextureFactory.CreateCircle(s.color);
+            body.sortingOrder = s.isBoss ? 6 : 5;
+
+            if (s.isBoss)
+            {
+                // Contur strălucitor + miez aprins, ca să iasă clar în evidență.
+                var outline = new GameObject("Outline");
+                outline.transform.SetParent(transform);
+                outline.transform.localPosition = Vector3.zero;
+                outline.transform.localScale = Vector3.one * 1.28f;
+                var oSr = outline.AddComponent<SpriteRenderer>();
+                oSr.sprite = TextureFactory.CreateRing(new Color(1f, 0.85f, 0.2f), 0.7f);
+                oSr.sortingOrder = 5;
+
+                var core = new GameObject("Core");
+                core.transform.SetParent(transform);
+                core.transform.localPosition = Vector3.zero;
+                core.transform.localScale = Vector3.one * 0.45f;
+                var cSr = core.AddComponent<SpriteRenderer>();
+                cSr.sprite = TextureFactory.CreateCircle(new Color(1f, 0.35f, 0.2f));
+                cSr.sortingOrder = 7;
+
+                var pulse = gameObject.AddComponent<Pulse>();
+                pulse.amplitude = 0.06f;
+                pulse.frequency = 3.5f;
+            }
+
+            // Bară de viață deasupra inamicului.
+            barWidth = s.isBoss ? 1.4f : 1f;
             var bar = new GameObject("HealthBar");
             bar.transform.SetParent(transform);
-            bar.transform.localPosition = new Vector3(0, 0.75f, 0);
-            bar.transform.localScale = new Vector3(1f, 0.14f, 1f);
+            bar.transform.localPosition = new Vector3(0, 0.72f, 0);
+            bar.transform.localScale = new Vector3(barWidth, 0.16f, 1f);
             var sr = bar.AddComponent<SpriteRenderer>();
             sr.sprite = TextureFactory.CreateSquare(Color.white);
             sr.color = Color.green;
-            sr.sortingOrder = 6;
+            sr.sortingOrder = 8;
             healthBar = bar.transform;
         }
 
@@ -97,7 +128,7 @@ namespace TowerDefense
             float t = Mathf.Clamp01(health / maxHealth);
             if (healthBar != null)
             {
-                healthBar.localScale = new Vector3(t, 0.14f, 1f);
+                healthBar.localScale = new Vector3(t * barWidth, 0.16f, 1f);
                 var sr = healthBar.GetComponent<SpriteRenderer>();
                 if (sr != null) sr.color = Color.Lerp(Color.red, Color.green, t);
             }

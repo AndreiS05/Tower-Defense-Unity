@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,23 +8,31 @@ using UnityEngine.UI;
 namespace TowerDefense
 {
     /// <summary>
-    /// Construiește și actualizează interfața jocului prin cod: afișează banii,
-    /// viețile și valul curent, oferă butoanele magazinului de ture și ecranul final.
+    /// Construiește și actualizează interfața jocului prin cod: bani, vieți, val, nivel,
+    /// magazinul de ture, bannere (nivel/boss) și ecranul final.
     /// </summary>
     public class GameUI : MonoBehaviour
     {
-        Text moneyText, livesText, waveText;
+        public static GameUI Instance { get; private set; }
+
+        Text moneyText, livesText, waveText, levelText;
+        Text bannerText;
         GameObject endPanel;
         Text endText;
-        WaveSpawner spawner;
         Font font;
         List<TurretBlueprint> blueprints;
         readonly List<Button> shopButtons = new List<Button>();
+        Coroutine bannerRoutine;
 
-        public void Init(List<TurretBlueprint> blueprints, WaveSpawner spawner)
+        void Awake()
+        {
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+            Instance = this;
+        }
+
+        public void Init(List<TurretBlueprint> blueprints)
         {
             this.blueprints = blueprints;
-            this.spawner = spawner;
             font = GetFont();
             EnsureEventSystem();
             BuildCanvas();
@@ -32,8 +41,13 @@ namespace TowerDefense
 
         void Update()
         {
-            if (spawner != null && waveText != null)
-                waveText.text = $"Val: {spawner.CurrentWave}/{spawner.TotalWaves}";
+            var lm = LevelManager.Instance;
+            if (lm != null)
+            {
+                if (levelText != null) levelText.text = $"Nivel: {lm.CurrentLevel}/{lm.TotalLevels}";
+                if (waveText != null && lm.CurrentSpawner != null)
+                    waveText.text = $"Val: {lm.CurrentSpawner.CurrentWave}/{lm.CurrentSpawner.TotalWaves}";
+            }
             HighlightSelected();
         }
 
@@ -49,9 +63,24 @@ namespace TowerDefense
             }
         }
 
+        /// <summary>Afișează un mesaj mare temporar în centru (ex. „NIVELUL 2", „BOSS!").</summary>
+        public void ShowBanner(string text, float duration)
+        {
+            if (bannerText == null) return;
+            bannerText.text = text;
+            bannerText.gameObject.SetActive(true);
+            if (bannerRoutine != null) StopCoroutine(bannerRoutine);
+            bannerRoutine = StartCoroutine(HideBanner(duration));
+        }
+
+        IEnumerator HideBanner(float duration)
+        {
+            yield return new WaitForSeconds(duration);
+            if (bannerText != null) bannerText.gameObject.SetActive(false);
+        }
+
         Font GetFont()
         {
-            // Numele resursei de font diferă între versiunile de Unity.
             Font f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
             if (f == null) f = Font.CreateDynamicFontFromOSFont("Arial", 16);
@@ -78,7 +107,7 @@ namespace TowerDefense
             scaler.referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // Bară de sus semitransparentă.
+            // Bară de sus.
             var bar = MakeRect("TopBar", canvas.transform);
             bar.anchorMin = new Vector2(0, 1);
             bar.anchorMax = new Vector2(1, 1);
@@ -87,14 +116,22 @@ namespace TowerDefense
             bar.anchoredPosition = Vector2.zero;
             bar.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.55f);
 
-            moneyText = MakeText(canvas.transform, "Bani: 0", 40, TextAnchor.MiddleLeft, new Color(1f, 0.85f, 0.2f));
-            Place(moneyText.rectTransform, new Vector2(0, 1), new Vector2(40, -45), new Vector2(600, 70));
+            moneyText = MakeText(canvas.transform, "Bani: 0", 38, TextAnchor.MiddleLeft, new Color(1f, 0.85f, 0.2f));
+            Place(moneyText.rectTransform, new Vector2(0, 1), new Vector2(30, -45), new Vector2(360, 70));
 
-            livesText = MakeText(canvas.transform, "Vieti: 0", 40, TextAnchor.MiddleCenter, new Color(1f, 0.45f, 0.45f));
-            Place(livesText.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -45), new Vector2(600, 70));
+            livesText = MakeText(canvas.transform, "Vieti: 0", 38, TextAnchor.MiddleLeft, new Color(1f, 0.45f, 0.45f));
+            Place(livesText.rectTransform, new Vector2(0, 1), new Vector2(400, -45), new Vector2(360, 70));
 
-            waveText = MakeText(canvas.transform, "Val: 0/0", 40, TextAnchor.MiddleRight, Color.white);
-            Place(waveText.rectTransform, new Vector2(1, 1), new Vector2(-40, -45), new Vector2(600, 70));
+            waveText = MakeText(canvas.transform, "Val: 0/0", 38, TextAnchor.MiddleRight, Color.white);
+            Place(waveText.rectTransform, new Vector2(1, 1), new Vector2(-400, -45), new Vector2(360, 70));
+
+            levelText = MakeText(canvas.transform, "Nivel: 1/3", 38, TextAnchor.MiddleRight, new Color(0.6f, 0.9f, 1f));
+            Place(levelText.rectTransform, new Vector2(1, 1), new Vector2(-30, -45), new Vector2(360, 70));
+
+            // Banner central (ascuns implicit).
+            bannerText = MakeText(canvas.transform, "", 96, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.3f));
+            Place(bannerText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 180), new Vector2(1600, 220));
+            bannerText.gameObject.SetActive(false);
 
             // Magazin (jos).
             float bw = 360, bh = 110, gap = 30;
@@ -110,7 +147,7 @@ namespace TowerDefense
                 shopButtons.Add(btn);
             }
 
-            // Ecran final (ascuns inițial).
+            // Ecran final (ascuns implicit).
             endPanel = MakeRect("EndPanel", canvas.transform).gameObject;
             var ep = endPanel.GetComponent<RectTransform>();
             ep.anchorMin = Vector2.zero;
@@ -120,9 +157,9 @@ namespace TowerDefense
             endPanel.AddComponent<Image>().color = new Color(0, 0, 0, 0.78f);
 
             endText = MakeText(endPanel.transform, "", 90, TextAnchor.MiddleCenter, Color.white);
-            Place(endText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 90), new Vector2(1200, 220));
+            Place(endText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 90), new Vector2(1400, 220));
 
-            var restart = MakeButton(endPanel.transform, "Reincearca", new Vector2(0.5f, 0.5f),
+            var restart = MakeButton(endPanel.transform, "Reia jocul", new Vector2(0.5f, 0.5f),
                 new Vector2(0, -90), new Vector2(440, 120), new Color(0.2f, 0.5f, 0.8f));
             restart.onClick.AddListener(() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex));
 
@@ -146,7 +183,7 @@ namespace TowerDefense
             endPanel.SetActive(true);
             if (s == GameManager.GameState.Victory)
             {
-                endText.text = "VICTORIE!";
+                endText.text = "AI CASTIGAT!";
                 endText.color = new Color(0.4f, 1f, 0.5f);
             }
             else

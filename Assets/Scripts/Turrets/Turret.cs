@@ -97,6 +97,7 @@ namespace TowerDefense
         void Shoot()
         {
             var go = new GameObject("Bullet");
+            if (transform.parent != null) go.transform.SetParent(transform.parent);
             go.transform.position = transform.position;
             go.AddComponent<Bullet>().Init(target, damage, bulletColor);
         }

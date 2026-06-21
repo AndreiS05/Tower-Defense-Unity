@@ -28,11 +28,31 @@ pentru a proteja un punct vital (baza).
 
 ## Cum se joacă
 
-- **Bani (resurse):** începi cu 200. Câștigi bani distrugând inamici.
-- **Vieți:** baza are 20 de vieți. Fiecare inamic care ajunge la capătul traseului scade o viață.
+- **Bani (resurse):** începi cu 200. Câștigi bani distrugând inamici (recompensă mică pe
+  inamic — economie echilibrată ca să nu devină prea ușor după multe ture). La fiecare
+  nivel terminat primești un bonus.
+- **Vieți:** baza are 20 de vieți. Fiecare inamic care ajunge la capătul traseului scade
+  vieți (boss-ul scade mult mai multe).
 - **Construire:** alege un tip de tură din magazinul de jos, apoi dă **click** pe o
   celulă verde liberă pentru a o plasa (dacă ai suficienți bani).
-- **Obiectiv:** rezistă tuturor celor 8 valuri. Dacă viețile ajung la 0 → înfrângere.
+- **Obiectiv:** treci toate cele **3 niveluri**. Dacă viețile ajung la 0 → înfrângere.
+
+## Niveluri și boss
+
+Campania are **3 niveluri**, fiecare cu **8 valuri**:
+
+| Nivel | Rute | Dificultate | Final |
+|-------|------|-------------|-------|
+| 1 | 1 rută | normală | Boss la valul 8 |
+| 2 | 2 rute (inamicii aleg aleatoriu) | mai grea | Boss la valul 8 |
+| 3 | 3 rute (inamicii aleg aleatoriu) | cea mai grea | Boss final la valul 8 |
+
+- La nivelurile cu mai multe rute, fiecare inamic alege **aleatoriu** o rută spre bază.
+- **Boss-ul** apare la ultimul val al fiecărui nivel: este mult mai mare, are foarte multă
+  viață și e **evidențiat vizual** (corp închis la culoare, contur auriu strălucitor, miez
+  pulsatil) ca să se distingă clar de inamicii de rând.
+- Punctele de **apariție** (portal cyan rotativ) și **baza** (romb roșu cu inel auriu și
+  miez pulsatil) au grafică dedicată.
 
 ### Tipuri de ture
 
@@ -51,13 +71,18 @@ Assets/
   Scripts/
     Core/
       GameManager.cs         # resurse, vieți, stare (singleton + evenimente)
-      GameBootstrap.cs       # construiește nivelul din cod la pornire
-      TextureFactory.cs      # generează sprite-uri (pătrat / cerc) procedural
+      GameBootstrap.cs       # creează managerii + UI la pornire
+      TextureFactory.cs      # generează sprite-uri (pătrat / cerc / inel) procedural
+      Decor.cs               # componente Rotate + Pulse pentru portal/bază/boss
+    Levels/
+      LevelDefinition.cs     # definiția campaniei (rute, dificultate, culori)
+      LevelBuilder.cs        # construiește grila, traseele, portalurile și baza
+      LevelManager.cs        # progresia între niveluri + victoria finală
     Path/
       WaypointPath.cs        # traiectoria predefinită a inamicilor
     Enemies/
-      Enemy.cs               # mișcare pe traseu, viață, recompensă, daune bazei
-      WaveSpawner.cs         # generează și lansează valurile
+      Enemy.cs               # mișcare pe traseu, viață, recompensă, daune; boss
+      WaveSpawner.cs         # 8 valuri, rute aleatorii, boss la valul 8
     Turrets/
       TurretBlueprint.cs     # definiția unui tip de tură (cost + statistici)
       Turret.cs              # țintire automată + tragere
