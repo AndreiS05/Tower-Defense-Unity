@@ -42,8 +42,8 @@ namespace TowerDefense
                 new TurretBlueprint("Lunetist", 150, 4.5f, 0.8f, 70f,
                     new Color(0.7f, 0.3f, 0.9f), Color.magenta, unlockLevel: 1),
 
-                // Nivel 2: Mortieră — daune de zonă (AoE) pe mai multe tile-uri.
-                new TurretBlueprint("Mortiera", 175, 2.8f, 0.8f, 28f,
+                // Nivel 2: Mortieră — daune de zonă (AoE) pe mai multe tile-uri (buff de daune).
+                new TurretBlueprint("Mortiera", 175, 2.8f, 0.8f, 75f,
                     new Color(0.4f, 0.8f, 0.3f), new Color(0.7f, 1f, 0.35f),
                     unlockLevel: 2, splashRadius: 1.8f),
 

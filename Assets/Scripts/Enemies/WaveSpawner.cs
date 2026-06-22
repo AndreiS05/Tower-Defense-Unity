@@ -54,8 +54,9 @@ namespace TowerDefense
                     interval = Mathf.Max(0.35f, 0.9f - i * 0.05f),
                     health = (40f + i * 18f) * def.healthMultiplier,
                     speed = 2.2f + i * 0.1f,
-                    // Economie: recompensă pe inamic, mărită cu 1.5x ca jocul să fie mai accesibil.
-                    reward = Mathf.RoundToInt((4 + i * 0.5f) * 1.5f),
+                    // Economie: recompensă de bază (x1.5) înmulțită cu un bonus pe nivel
+                    // (nivel 1 x1.0, nivel 2 x1.5, nivel 3 x2.0), fiindcă inamicii devin mai grei.
+                    reward = Mathf.RoundToInt((4 + i * 0.5f) * 1.5f * (1f + 0.5f * (level - 1))),
                     color = Color.Lerp(def.enemyColorA, def.enemyColorB, tNorm),
                     scale = 0.55f + i * 0.015f
                 });

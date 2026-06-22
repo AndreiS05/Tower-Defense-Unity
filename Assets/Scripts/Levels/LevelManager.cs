@@ -88,7 +88,8 @@ namespace TowerDefense
                 if (ui != null) ui.ShowBanner($"NIVELUL {CurrentLevel} COMPLET!", 2.5f);
                 yield return new WaitForSeconds(2.6f);
 
-                if (GameManager.Instance != null) GameManager.Instance.AddMoney(75); // bonus de nivel
+                // Bonus de nivel, mai mare pe niveluri avansate (100 dupa nivel 1, 200 dupa nivel 2).
+                if (GameManager.Instance != null) GameManager.Instance.AddMoney(100 * CurrentLevel);
                 CurrentLevel++;
                 BuildLevel();
                 transitioning = false;
